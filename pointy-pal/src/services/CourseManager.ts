@@ -6,27 +6,14 @@ export class CourseManager
 {
 
     private departments : string[];
-    private client : Client;
+    private commandGuild! : Guild;
+    private commandChannel! : GuildChannel;
 
-    private commandGuild : Guild;
-    private commandChannel : GuildChannel;
-
-    constructor(client: Client)
+    constructor(client : Client)
     {
-        this.client = client
-        
         let text : string = fs.readFileSync("./resources/departments.txt", "utf8");
         this.departments = text.split('\n');
         console.log(`CourseManager: Departments Loaded (${this.departments.length} departments)`);
-
-        this.commandGuild = null!;
-        this.commandChannel = null!;
-
-    }
-
-    public initialize(client : Client)
-    {
-
         let guildId : string = String(process.env.GUILD_ID);
         client.guilds.fetch(guildId).then((guild : Guild) => {
 
@@ -51,28 +38,22 @@ export class CourseManager
     {
         let changes : number = 0;
 
-        if (command.channel.id != this.commandChannel.id) {
-            console.log("Message was not in the correct channel.")
-            return false;
+        if (command.channel.id == this.commandChannel.id) {
+            switch (command.instruction) {
+
+                case "add-class":
+                    changes = this.addCourses(command.user, command.arguments)
+                    break;
+
+                case "remove-class":
+                    changes = this.removeCourses(command.user, command.arguments)
+                    break;
+            }
+            console.log(`Changes made: ${changes}`)
+            return changes > 0;
         }
-
-        switch (command.instruction) {
-
-            case "add-class":
-                changes = this.addCourses(command.user, command.arguments)
-                break;
-
-            case "remove-class":
-                changes = this.removeCourses(command.user, command.arguments)
-                break;
-
-            default:
-                break;
-        }
-
-        console.log(`Changes made: ${changes}`)
-
-        return changes > 0;
+        console.log("Message was not in the correct channel.")
+        return false;
     }
 
     private validateCourse(course: string) : boolean
@@ -83,21 +64,8 @@ export class CourseManager
         
         console.log(`Course parts: ${parts}`);
 
-        if (parts.length != 2) // If the course has more than two parts (two alpha-numerical groups)
-        {
-            return false;
-        }
-        else if (parts[1].length != 4) // If the course number isn't 4 numbers
-        {
-            return false;
-        }
-        else if (!this.departments.find((str : string) => str.toUpperCase() === parts[0].toUpperCase()))
-        // If the course department doesn't exist
-        {
-            return false;
-        }
-
-        return true;
+        //if parts isn't length 2 & course number isn't 4 letters && departments contains course, return true
+        return (parts.length == 2 && parts[1].length == 4 && this.departments.includes(parts[0].toUpperCase()));
     }
 
     private addCourse(user : User, course: string) : number

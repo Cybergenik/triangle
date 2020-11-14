@@ -1,30 +1,29 @@
 import {Client, Message} from "discord.js";
 import {Command} from "./structs/command";
-import {CommandParser} from "./services/commandparser"
-import { CourseManager } from "./services/classmanager";
+import { CourseManager } from "./services/CourseManager";
 
 export class Bot
 {
 
     private client : Client = new Client();
-    private commandParser : CommandParser = new CommandParser();
-    private courseManager : CourseManager = new CourseManager(this.client);
+    private courseManager! : CourseManager;
 
     public listen(): Promise<string>
     {
         
         this.client.on('ready', () => {
             console.log(`Logged in as ${"Somebody!"}!`);
-
-            this.courseManager.initialize(this.client);
-
+            //for(let guild in this.client.guilds){
+            //    console.log(`Connected to:`);
+            //}
+            this.courseManager = new CourseManager(this.client);
             return;
         });
 
         this.client.on('message', (msg : Message) => {
             console.log(`Message received: ${msg.content}`);
 
-            let command: Command = this.commandParser.parse(msg.content);
+            let command: Command = this.parseInput(msg.content);
             if (!command.instruction)
             {
                 console.log("Message was not a command.");
@@ -70,6 +69,32 @@ export class Bot
         })
 
         return this.client.login(process.env.TOKEN)
+    }
+
+    private parseInput(input : string) : Command {
+        let result: Command = {} as any;
+
+        let regexp : RegExp = new RegExp("^!pal\s*$");
+        // Return an empty command if the result wasn't a command
+        if (regexp.exec(input))
+        {
+            let tokens: string[] = input.split(' ');
+
+            // Shift the !pal tag from the tokens
+            tokens.shift();
+
+            // If no other arguments were given, interpret it as a help request
+            if (tokens.length == 0) {
+                result.instruction = "help";
+                return result;
+            }
+            // Set the instruction to the first token, then remove the token
+            result.instruction = tokens[0];
+            tokens.shift();
+            // Set the arguments to the rest of the tokens
+            result.arguments = tokens;
+        }
+        return result;
     }
 
 }
